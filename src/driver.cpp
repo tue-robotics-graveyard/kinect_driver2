@@ -38,6 +38,19 @@ int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "rgbd_transport_server");
 
+    ros::NodeHandle nh_private("~");
+    std::string frame_id = "rgbd";
+    nh_private.getParam("frame_id", frame_id);
+
+    double fx = 368.096588;
+    double fy = 368.096588;
+    double cx = 261.696594;
+    double cy = 202.522202;
+    nh_private.getParam("fx", fx);
+    nh_private.getParam("fy", fy);
+    nh_private.getParam("cx", cx);
+    nh_private.getParam("cy", cy);
+
     libfreenect2::Freenect2 freenect2;
     libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
 
@@ -60,9 +73,6 @@ int main(int argc, char *argv[])
     rgbd::Server server;
     server.initialize("rgbd", rgbd::RGB_STORAGE_JPG, rgbd::DEPTH_STORAGE_PNG);
 
-    std::string frame_id = "";
-    double fx = 0, fy = 0;
-
     while(ros::ok())
     {
         listener.waitForNewFrame(frames);
@@ -76,9 +86,16 @@ int main(int argc, char *argv[])
         geo::DepthCamera cam_model;
         cam_model.setFocalLengths(fx, fy);
         cam_model.setOpticalTranslation(0, 0);
-        cam_model.setOpticalCenter(319.5, 239.5);
+        cam_model.setOpticalCenter(cx, cy);
 
-        std::cout << rgb->width << " x " << rgb->height << std::endl;
+//        cv::Mat rgb_image_small(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
+//        cv::resize(rgb_image, rgb_image_small, cv::Size(640,480));
+
+//        cv::Mat depth_image_small(240, 320, CV_32FC1, 0.0f);
+//        cv::resize(depth_image, depth_image_small, cv::Size(320, 240));
+
+//        cv::imshow("rgb", rgb_image_small);
+//        cv::waitKey(1);
 
         rgbd::Image image(rgb_image, depth_image, cam_model, frame_id, ros::Time::now().toSec());
         server.send(image);
