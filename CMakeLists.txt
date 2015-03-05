@@ -20,6 +20,7 @@ find_package(freenect2 REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(
+    include
     ${OpenCV_INCLUDE_DIRS}
     ${freenect2_INCLUDE_DIRS}
     ${freenect2_INCLUDE_DIR}/libfreenect2/tinythread
@@ -31,6 +32,17 @@ add_executable(kinect_driver2
 )
 target_link_libraries(kinect_driver2 ${catkin_LIBRARIES} ${freenect2_LIBRARIES} ${OpenCV_LIBRARIES})
 
+add_executable(kinect_driver2_mem
+    src/mem_driver.cpp
+    include/rgbd_image_header.h
+)
+target_link_libraries(kinect_driver2_mem ${freenect2_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(kinect_driver2_mem_client
+    src/mem_driver_client.cpp
+    include/rgbd_image_header.h
+)
+target_link_libraries(kinect_driver2_mem_client ${OpenCV_LIBRARIES})
 
 
 
