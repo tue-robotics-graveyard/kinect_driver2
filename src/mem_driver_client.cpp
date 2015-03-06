@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 
         if (!image_header || image_header->num_writers > 0)
         {
-            usleep(1000);
+//            usleep(1000);
             continue;
         }
 
@@ -91,10 +91,10 @@ int main(int argc, char *argv[])
 
         std::cout << "RGB: " << (ok ? "OK" : "NOT OK") << " (v = " << v << ")" << std::endl;
 
-        cv::imshow("rgb", rgb);
-        cv::imshow("depth", depth / 8);
+//        cv::imshow("rgb", rgb);
+//        cv::imshow("depth", depth / 8);
 
-        cv::waitKey(1);
+//        cv::waitKey(1);
 
         sequence_nr = buffer_header.sequence_nr;
     }

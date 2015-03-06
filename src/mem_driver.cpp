@@ -97,14 +97,14 @@ int main(int argc, char *argv[])
             memcpy(image_data + rgb_data_size, depth.data, depth_data_size);
 
             --image_header->num_writers;
+
+            v = v + 0.01;
+            if (v > 1.0) v = 0;
+
+            c = 255 - c;
+
+            cv::waitKey(30);
         }
-
-        v = v + 0.01;
-        if (v > 1.0) v = 0;
-
-        c = 255 - c;
-
-        cv::waitKey(100);
 
     }
 
