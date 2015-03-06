@@ -12,6 +12,9 @@ struct BufferHeader
 
 struct RGBDImageHeader
 {
+    uint32_t num_writers;
+    uint32_t num_readers;
+
     uint32_t rgb_width;         // width of rgb image
     uint32_t rgb_height;        // height of rgb image
     uint32_t depth_width;       // width of depth image

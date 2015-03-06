@@ -36,13 +36,13 @@ add_executable(kinect_driver2_mem
     src/mem_driver.cpp
     include/rgbd_image_header.h
 )
-target_link_libraries(kinect_driver2_mem ${freenect2_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(kinect_driver2_mem ${freenect2_LIBRARIES} ${OpenCV_LIBRARIES} rt)
 
 add_executable(kinect_driver2_mem_client
     src/mem_driver_client.cpp
     include/rgbd_image_header.h
 )
-target_link_libraries(kinect_driver2_mem_client ${OpenCV_LIBRARIES})
+target_link_libraries(kinect_driver2_mem_client ${OpenCV_LIBRARIES} rt)
 
 
 

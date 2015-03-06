@@ -7,10 +7,21 @@
 
 #include "rgbd_image_header.h"
 
+#include <signal.h>
+
 namespace ipc = boost::interprocess;
+
+bool stop = false;
+
+void signalHander(int signal)
+{
+    stop = true;
+}
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, signalHander);
+
     double fx = 368.096588;
     double fy = 368.096588;
     double cx = 261.696594;
@@ -43,15 +54,19 @@ int main(int argc, char *argv[])
     uint64_t depth_data_size = 0;
     uint64_t image_data_size = 0;
 
-    while(true)
+    double v = 0;
+    int c = 0;
+
+    while(!stop)
     {
-        cv::Mat rgb(960, 1240, CV_8UC3, cv::Scalar(0, 0, 255));
+        cv::Mat rgb(960, 1240, CV_8UC3, cv::Scalar(0, 255 - c, c));
         cv::Mat depth(480, 640, CV_32FC1, 1.0f);
 
         if (!image_header || rgb.cols != image_header->rgb_width || rgb.rows != image_header->rgb_height
                 || depth.cols != image_header->depth_width || depth.rows != image_header->depth_height)
         {
             rgb_data_size = rgb.cols * rgb.rows * 3;
+
             depth_data_size = depth.cols * depth.rows * 4;
             image_data_size = rgb_data_size + depth_data_size;
 
@@ -67,20 +82,35 @@ int main(int argc, char *argv[])
 
             image_header->rgb_width = rgb.cols;
             image_header->rgb_height = rgb.rows;
-            image_header->depth_width = rgb.cols;
-            image_header->depth_height = rgb.rows;
+            image_header->depth_width = depth.cols;
+            image_header->depth_height = depth.rows;
+            image_header->num_readers = 0;
+            image_header->num_writers = 0;
         }
 
-        if (image_header)
+        if (image_header && image_header->num_readers == 0)
         {
+            ++image_header->num_writers;
+
             ++buffer_header.sequence_nr;
-            memcpy(image_data, rgb.data, rgb.cols * rgb.rows * 3);
-            memcpy(image_data + rgb_data_size, depth.data, depth.cols * depth.rows * 4);
+            memcpy(image_data, rgb.data, rgb_data_size);
+            memcpy(image_data + rgb_data_size, depth.data, depth_data_size);
+
+            --image_header->num_writers;
         }
 
-        cv::waitKey(30);
+        v = v + 0.01;
+        if (v > 1.0) v = 0;
+
+        c = 255 - c;
+
+        cv::waitKey(100);
 
     }
+
+    std::cout << "Removing shared memory" << std::endl;
+
+    ipc::shared_memory_object::remove("MySharedMemory");
 
     return 0;
 }
