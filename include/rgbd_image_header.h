@@ -3,17 +3,23 @@
 
 #include <stdint.h>
 
+#include <boost/interprocess/sync/interprocess_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_condition.hpp>
+
 struct BufferHeader
 {
-    uint64_t memory_block_size; // size of the shared memory block
     uint64_t sequence_nr;       // sequence number of the image (can be used to check if there is a new image)
-    uint64_t data_offset;       // offset after this header of where the image is stored in memory
-};
 
-struct RGBDImageHeader
-{
-    uint32_t num_writers;
-    uint32_t num_readers;
+    //Mutex to protect access to the queue
+    boost::interprocess::interprocess_mutex      mutex;
+
+    //Condition to wait when the queue is empty
+    boost::interprocess::interprocess_condition  cond_empty;
+
+    //Condition to wait when the queue is full
+    boost::interprocess::interprocess_condition  cond_full;
+
+    bool message_in;
 
     uint32_t rgb_width;         // width of rgb image
     uint32_t rgb_height;        // height of rgb image

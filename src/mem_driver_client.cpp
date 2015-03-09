@@ -19,62 +19,36 @@ int main(int argc, char *argv[])
     shm.get_size(size);
     std::cout << "Shared memory size = " << size << " bytes" << std::endl;
 
-    ipc::mapped_region mem_buffer_header(shm, ipc::read_only, 0, sizeof(BufferHeader));
-    ipc::mapped_region mem_image_header, mem_image_data;
+    ipc::mapped_region mem_buffer_header(shm, ipc::read_write, 0, sizeof(BufferHeader));
+    ipc::mapped_region mem_image_data(shm, ipc::read_only, sizeof(BufferHeader));
 
     BufferHeader& buffer_header = *static_cast<BufferHeader*>(mem_buffer_header.get_address());
-    RGBDImageHeader* image_header = 0;
 
     int sequence_nr = 0;
-    uint64_t mem_size = 0;
 
     while(true)
     {
-        if (buffer_header.sequence_nr == sequence_nr)
+        cv::Mat rgb, depth;
+
         {
-            usleep(1000);
-            continue;
+            ipc::scoped_lock<ipc::interprocess_mutex> lock(buffer_header.mutex);
+
+            if (buffer_header.sequence_nr == sequence_nr)
+                buffer_header.cond_empty.wait(lock);
+
+            std::cout << buffer_header.sequence_nr << std::endl;
+
+            uchar* image_data = static_cast<uchar*>(mem_image_data.get_address());
+
+            uint64_t rgb_data_size = buffer_header.rgb_width * buffer_header.rgb_height * 3;
+            uint64_t depth_data_size = buffer_header.depth_width * buffer_header.depth_height * 4;
+
+            rgb = cv::Mat(buffer_header.rgb_height, buffer_header.rgb_width, CV_8UC3);
+            depth = cv::Mat(buffer_header.depth_height, buffer_header.depth_width, CV_32FC1);
+
+            memcpy(rgb.data, image_data, rgb_data_size);
+            memcpy(depth.data, image_data + rgb_data_size, depth_data_size);
         }
-
-        if (buffer_header.memory_block_size != mem_size)
-        {
-            mem_size = buffer_header.memory_block_size;
-
-            if (mem_size > 0)
-            {
-                mem_image_header = ipc::mapped_region(shm, ipc::read_write, sizeof(BufferHeader), sizeof(RGBDImageHeader));
-                image_header = static_cast<RGBDImageHeader*>(mem_image_header.get_address());
-
-                mem_image_data = ipc::mapped_region(shm, ipc::read_only, sizeof(BufferHeader) + sizeof(RGBDImageHeader));
-            }
-            else
-            {
-                image_header = 0;
-            }
-        }
-
-        if (!image_header || image_header->num_writers > 0)
-        {
-//            usleep(1000);
-            continue;
-        }
-
-        std::cout << buffer_header.sequence_nr << std::endl;
-
-        ++image_header->num_readers;
-
-        uchar* image_data = static_cast<uchar*>(mem_image_data.get_address());
-
-        uint64_t rgb_data_size = image_header->rgb_width * image_header->rgb_height * 3;
-        uint64_t depth_data_size = image_header->depth_width * image_header->depth_height * 4;
-
-        cv::Mat rgb(image_header->rgb_height, image_header->rgb_width, CV_8UC3);
-        cv::Mat depth(image_header->depth_height, image_header->depth_width, CV_32FC1);
-
-        memcpy(rgb.data, image_data, rgb_data_size);
-        memcpy(depth.data, image_data + rgb_data_size, depth_data_size);
-
-        --image_header->num_readers;
 
         // Check image consistency
 
@@ -91,10 +65,10 @@ int main(int argc, char *argv[])
 
         std::cout << "RGB: " << (ok ? "OK" : "NOT OK") << " (v = " << v << ")" << std::endl;
 
-//        cv::imshow("rgb", rgb);
-//        cv::imshow("depth", depth / 8);
+        cv::imshow("rgb", rgb);
+        cv::imshow("depth", depth / 8);
 
-//        cv::waitKey(1);
+        cv::waitKey(1);
 
         sequence_nr = buffer_header.sequence_nr;
     }
