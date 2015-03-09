@@ -32,5 +32,9 @@ add_executable(kinect_driver2
 target_link_libraries(kinect_driver2 ${catkin_LIBRARIES} ${freenect2_LIBRARIES} ${OpenCV_LIBRARIES})
 
 
+add_executable(kinect_driver2_reg
+    src/register_depth.cpp
+)
+target_link_libraries(kinect_driver2_reg ${OpenCV_LIBRARIES})
 
 

@@ -42,14 +42,32 @@ int main(int argc, char *argv[])
     std::string frame_id = "rgbd";
     nh_private.getParam("frame_id", frame_id);
 
-    double fx = 368.096588;
-    double fy = 368.096588;
-    double cx = 261.696594;
-    double cy = 202.522202;
-    nh_private.getParam("fx", fx);
-    nh_private.getParam("fy", fy);
-    nh_private.getParam("cx", cx);
-    nh_private.getParam("cy", cy);
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Depth intrinsic params
+
+    double depth_fx = 368.096588;
+    double depth_fy = 368.096588;
+    double depth_cx = 261.696594;
+    double depth_cy = 202.522202;
+
+    nh_private.getParam("depth_fx", depth_fx);
+    nh_private.getParam("depth_fy", depth_fy);
+    nh_private.getParam("depth_cx", depth_cx);
+    nh_private.getParam("depth_cy", depth_cy);
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // RGB intrinsic params
+
+    double rgb_fx = 1060.707250708333;
+    double rgb_fy = 1058.608326305465;
+    double rgb_cx = 956.354471815484;
+    double rgb_cy = 518.9784429882449;
+
+    nh_private.getParam("rgb_fx", rgb_fx);
+    nh_private.getParam("rgb_fy", rgb_fy);
+    nh_private.getParam("rgb_cx", rgb_cx);
+    nh_private.getParam("rgb_cy", rgb_cy);
+
 
     libfreenect2::Freenect2 freenect2;
     libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
@@ -84,9 +102,34 @@ int main(int argc, char *argv[])
         cv::Mat depth_image = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 1000.0f;
 
         geo::DepthCamera cam_model;
-        cam_model.setFocalLengths(fx, fy);
+        cam_model.setFocalLengths(depth_fx, depth_fy);
         cam_model.setOpticalTranslation(0, 0);
-        cam_model.setOpticalCenter(cx, cy);
+        cam_model.setOpticalCenter(depth_cx, depth_cy);
+
+
+//        // Registration
+//        for(int y = 0; y < depth_image.rows; ++y)
+//        {
+//            for(int x = 0; x < depth_image.cols; ++x)
+//            {
+//                float z = depth_image.at<float>(y, x);
+//                if (z == 0)
+//                    continue;
+
+//                float px = z * ((x - depth_cx) / depth_fx);
+//                float py = z * ((y - depth_cy) / depth_fy);
+
+//                int x_rgb = (rgb_fx * px) / z + rgb_cx;
+//                int y_rgb = (rgb_fy * px) / z + rgb_cy;
+
+//                int c = (z / 10) * 255;
+//                rgb_image.at<cv::Vec3b>(y_rgb, x_rgb) = cv::Vec3b(c, c, c);
+//            }
+//        }
+
+        cv::imshow("rgb", rgb_image);
+        cv::imshow("depth", depth_image / 10);
+        cv::waitKey(3);
 
 //        cv::Mat rgb_image_small(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
 //        cv::resize(rgb_image, rgb_image_small, cv::Size(640,480));
@@ -97,8 +140,8 @@ int main(int argc, char *argv[])
 //        cv::imshow("rgb", rgb_image_small);
 //        cv::waitKey(1);
 
-        rgbd::Image image(rgb_image, depth_image, cam_model, frame_id, ros::Time::now().toSec());
-        server.send(image);
+//        rgbd::Image image(rgb_image, depth_image, cam_model, frame_id, ros::Time::now().toSec());
+//        server.send(image);
 
         listener.release(frames);
     }
