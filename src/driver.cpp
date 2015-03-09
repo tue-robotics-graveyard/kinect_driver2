@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
     double rgb_fx = 1060.707250708333;
     double rgb_fy = 1058.608326305465;
-    double rgb_cx = 956.354471815484;
+    double rgb_cx = 956.354471815484 + 25;
     double rgb_cy = 518.9784429882449;
 
     nh_private.getParam("rgb_fx", rgb_fx);
@@ -101,31 +101,38 @@ int main(int argc, char *argv[])
         cv::Mat rgb_image(rgb->height, rgb->width, CV_8UC3, rgb->data);
         cv::Mat depth_image = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 1000.0f;
 
-        geo::DepthCamera cam_model;
-        cam_model.setFocalLengths(depth_fx, depth_fy);
-        cam_model.setOpticalTranslation(0, 0);
-        cam_model.setOpticalCenter(depth_cx, depth_cy);
+        float lens_dist_x = 0.052;
+        float lens_dist_y = 0;
 
+        float qx = rgb_fx / depth_fx;
+        float sx = rgb_fx * lens_dist_x; // delta in pixels at 1 m distance
+
+        float qy = rgb_fy / depth_fy;
+        float sy = rgb_fy * lens_dist_y; // delta in pixels at 1 m distance
 
 //        // Registration
-//        for(int y = 0; y < depth_image.rows; ++y)
-//        {
-//            for(int x = 0; x < depth_image.cols; ++x)
-//            {
-//                float z = depth_image.at<float>(y, x);
-//                if (z == 0)
-//                    continue;
+        for(int y = 0; y < depth_image.rows; ++y)
+        {
+            for(int x = 0; x < depth_image.cols; ++x)
+            {
+                float z = depth_image.at<float>(y, x);
+                if (z == 0 || z > 1.3)
+                    continue;
 
-//                float px = z * ((x - depth_cx) / depth_fx);
-//                float py = z * ((y - depth_cy) / depth_fy);
+                int x_rgb = qx * ((float)x - depth_cx) + (sx / z) + rgb_cx;
+                if (x_rgb < 0 || x_rgb >= rgb_image.cols)
+                    continue;
 
-//                int x_rgb = (rgb_fx * px) / z + rgb_cx;
-//                int y_rgb = (rgb_fy * px) / z + rgb_cy;
+                int y_rgb = qy * ((float)y - depth_cy) + (sy / z) + rgb_cy;
+                if (y_rgb < 0 || y_rgb >= rgb_image.rows)
+                    continue;
 
-//                int c = (z / 10) * 255;
-//                rgb_image.at<cv::Vec3b>(y_rgb, x_rgb) = cv::Vec3b(c, c, c);
-//            }
-//        }
+//                std::cout << x << ", " << y << " --> " << x_rgb << ", " << y_rgb << std::endl;
+
+                int c = (z / 10) * 255;
+                rgb_image.at<cv::Vec3b>(y_rgb, x_rgb) = cv::Vec3b(c, c, c);
+            }
+        }
 
         cv::imshow("rgb", rgb_image);
         cv::imshow("depth", depth_image / 10);
@@ -139,6 +146,11 @@ int main(int argc, char *argv[])
 
 //        cv::imshow("rgb", rgb_image_small);
 //        cv::waitKey(1);
+
+//        geo::DepthCamera cam_model;
+//        cam_model.setFocalLengths(depth_fx, depth_fy);
+//        cam_model.setOpticalTranslation(0, 0);
+//        cam_model.setOpticalCenter(depth_cx, depth_cy);
 
 //        rgbd::Image image(rgb_image, depth_image, cam_model, frame_id, ros::Time::now().toSec());
 //        server.send(image);
